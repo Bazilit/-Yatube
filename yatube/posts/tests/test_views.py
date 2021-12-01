@@ -2,6 +2,7 @@ from http import HTTPStatus
 
 from django import forms
 from django.conf import settings as st
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -318,4 +319,23 @@ class PostsVievTests(TestCase):
         self.assertEqual(len(
             response.context['page_obj']),
             PostsVievTests.last_count_pages
+        )
+
+    def test_cache_correct_worked(self):
+        response = self.authorized_client.get(reverse('posts:index'))
+        content_before_deletion = response.content
+        Post.objects.all().delete()
+        response = self.authorized_client.get(reverse('posts:index'))
+        content_after_deletion = response.content
+        self.assertEqual(
+            content_before_deletion,
+            content_after_deletion,
+            'Кэширование не работает.'
+        )
+        cache.clear()
+        response = self.authorized_client.get(reverse('posts:index'))
+        self.assertNotEqual(
+            content_before_deletion,
+            response.content,
+            'Кэширование после очистки не работает.'
         )
