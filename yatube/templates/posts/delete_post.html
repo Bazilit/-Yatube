@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Страница удаления текущей записи{% endblock %}
+{% block content %}
+<p>Вы действительно хотите удалить данную запись?</p>
+<form action="{% url 'posts:post_delete' item.id %}" method="post">
+{% csrf_token %}
+<a href="{% url 'posts:index' %}">Отмена</a>
+<input type="submit" name="Confirm">
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Технологии{% endblock %}
+{% block content %}
+<div class="row">
+  <h3>При создание сайта ни один <b>Python</b> не пострадал...</h3><br>
+  <br>
+  <aside class="col-12 col-md-3">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        <li class="list-group-item list-group-item-primary">Python v 3.9.7</li>
+      </li>
+      <li class="list-group-item">
+        <li class="list-group-item list-group-item-success">Dgango 2.2.9</li>
+      </li>
+      </li>
+      <li class="list-group-item">
+        <li class="list-group-item list-group-item-info">VS code</li>
+      </li>
+    </ul>
+  </aside>
+  <article class="col-12 col-md-9">
+  <figure class="figure">
+  <img src="{% static 'img/Python_lern.jpg' %}" class="figure-img img-fluid rounded" alt="...">
+  <figcaption class="figure-caption">¯\_(ツ)_/¯</figcaption>
+</figure>
+  </article>
+</div>
+{% endblock %}

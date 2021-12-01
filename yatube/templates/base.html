@@ -1,0 +1,11 @@
+<html lang="ru">          
+  <head>
+    {% include 'includes/head.html' %} 
+      <title>{% block title %}Контент не подвезли =:({% endblock %}</title>
+  </head>
+  <body>     
+    <header>{% include 'includes/header.html' %}</header>
+    <main>{% block content %}Контент не подвезли =:({% endblock %}</main>
+    {% include 'includes/footer.html' %}
+  </body>
+</html> 
