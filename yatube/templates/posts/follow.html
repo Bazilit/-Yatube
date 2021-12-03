@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
 {% load thumbnail %}
-{% block title %}Последние обновления на сайте{% endblock %}
-{% block header %}<h1>Последние обновления на сайте</h1>{% endblock %}
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
+<h3><i>Последние обновления на <p>{% now 'd E Y' %}</p></i></h3>
 {% include 'posts/includes/switcher.html' %}
-{% load cache %}
-{% cache 20 page_obj %}
   {% for post in page_obj %}
     <ul>
       <li>Автор: <a href="{% url 'posts:profile' post.author.username %}">{{ post.author.get_full_name }}</a></li>
@@ -27,8 +26,6 @@
       <hr>
     {% endif %}
     {% endfor %}
-    {% endcache %}
       <hr>
     {% include 'posts/includes/paginator.html' %}
 {% endblock %}
-

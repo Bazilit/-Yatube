@@ -41,11 +41,16 @@ def profile(request, username):
     paginator = Paginator(user_posts, st.PАGES)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user, author=author
+        ).exists()
     template = 'posts/profile.html'
     context = {
         'author': author,
         'post_count': count_user_posts,
         'page_obj': page_obj,
+        'following': following,
     }
     return render(request, template, context)
 
@@ -123,16 +128,17 @@ def add_comment(request, post_id):
 def follow_index(request):
     """Посты авторов, на которых подписан текущий пользователь.
     """
-    user = request.user
-    following = user.following.values_list('author', flat=True)
-    news = Post.objects.filter(author_id__in=following).order_by('-pub_date')
+    news = Post.objects.filter(
+        author__following__user=request.user
+    ).order_by('-pub_date')
     paginator = Paginator(news, st.PАGES)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    title = 'Лента избранного'
     template = 'posts/follow.html'
     context = {
-        'news': news,
-        'news_obj': page_obj,
+        'page_obj': page_obj,
+        'title': title,
     }
     return render(request, template, context)
 
@@ -143,8 +149,8 @@ def profile_follow(request, username):
     """
     user = request.user
     following = get_object_or_404(User, username=username)
-    Follow.objects.create(follower=user, following=following)
-    return redirect(reversed('posts:profile', kwargs={'username': username}))
+    Follow.objects.create(user=user, author=following)
+    return redirect('posts:profile', username=username)
 
 
 @login_required
@@ -152,7 +158,7 @@ def profile_unfollow(request, username):
     """ Функция отписки от автора.
     """
     user = request.user
-    following = get_object_or_404(User, username=username)
-    follow = Follow.objects.filter(follower=user, following=following)
+    follower = get_object_or_404(User, username=username)
+    follow = Follow.objects.filter(user=user, author=follower)
     follow.delete()
-    return redirect(reversed('posts:profile', kwargs={'username': username}))
+    return redirect('posts:profile', username=username)

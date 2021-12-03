@@ -62,10 +62,10 @@ class Comment(models.Model):
     )
     author = models.ForeignKey(
         User,
+        blank=True, null=True,
         verbose_name='Автор комментария.',
         on_delete=models.CASCADE,
         related_name='comments',
-        blank=True, null=True,
     )
     text = models.TextField(
         verbose_name='Текст комментария.',
