@@ -5,7 +5,7 @@
 {% block content %}
 {% include 'posts/includes/switcher.html' %}
 {% load cache %}
-{% cache 15 index_page %}
+{% cache 20 index_page %}
   {% for post in page_obj %}
   
     <ul>
