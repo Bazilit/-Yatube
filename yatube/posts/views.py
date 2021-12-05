@@ -45,6 +45,8 @@ def profile(request, username):
         following = Follow.objects.filter(
             user=request.user, author=author
         ).exists()
+    else:
+        following = None
     template = 'posts/profile.html'
     context = {
         'author': author,
@@ -149,6 +151,11 @@ def profile_follow(request, username):
     """
     user = request.user
     following = get_object_or_404(User, username=username)
+    if (
+        following == request.user
+        or Follow.objects.filter(author=following, user=request.user).exists()
+    ):
+        return redirect('posts:profile', username=username)
     Follow.objects.create(user=user, author=following)
     return redirect('posts:profile', username=username)
 

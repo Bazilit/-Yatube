@@ -5,8 +5,9 @@
 {% block content %}
 {% include 'posts/includes/switcher.html' %}
 {% load cache %}
-{% cache 20 page_obj %}
+{% cache 15 index_page %}
   {% for post in page_obj %}
+  
     <ul>
       <li>Автор: <a href="{% url 'posts:profile' post.author.username %}">{{ post.author.get_full_name }}</a></li>
       <li>Дата публикации: {{ post.pub_date|date:"d E Y" }}</li>
@@ -28,6 +29,7 @@
     {% endif %}
     {% endfor %}
     {% endcache %}
+   
       <hr>
     {% include 'posts/includes/paginator.html' %}
 {% endblock %}

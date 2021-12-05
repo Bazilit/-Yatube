@@ -4,11 +4,12 @@ from django import forms
 from django.conf import settings as st
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.shortcuts import get_object_or_404
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from ..models import Group, Post, User
+from ..models import Follow, Group, Post, User
 
 
 class PostsVievTests(TestCase):
@@ -322,9 +323,15 @@ class PostsVievTests(TestCase):
         )
 
     def test_cache_correct_worked(self):
+        """Проверка кэширования.
+        """
         response = self.authorized_client.get(reverse('posts:index'))
         content_before_deletion = response.content
-        Post.objects.all().delete()
+        text = 'Тест кэширования!'
+        self.authorized_client.post(
+            reverse('posts:post_create'),
+            data={'text': text}
+        )
         response = self.authorized_client.get(reverse('posts:index'))
         content_after_deletion = response.content
         self.assertEqual(
@@ -334,8 +341,165 @@ class PostsVievTests(TestCase):
         )
         cache.clear()
         response = self.authorized_client.get(reverse('posts:index'))
+        content_after_deletion_again = response.content
         self.assertNotEqual(
             content_before_deletion,
-            response.content,
+            content_after_deletion_again,
             'Кэширование после очистки не работает.'
         )
+
+    def test_follow_author(self):
+        """Проверяем возможность подписаться на автора.
+        """
+        count_follow_in_bd = Follow.objects.count()
+        user_krio = User.objects.create_user(username='Krio')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(user_krio)
+        response = self.authorized_client.post(reverse(
+            'posts:profile_follow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        count_follow_in_bd_after_response = Follow.objects.count()
+        follow_response = get_object_or_404(
+            Follow, user=user_krio,
+            author=PostsVievTests.user
+        )
+        self.assertEqual(
+            PostsVievTests.user,
+            follow_response.author,
+            'Подписки на автора нет.'
+        )
+        self.assertEqual(
+            count_follow_in_bd_after_response, count_follow_in_bd + 1,
+            'Не удалось подписаться.'
+        )
+        self.assertRedirects(response, reverse(
+            'posts:profile',
+            kwargs={'username': PostsVievTests.user})
+        )
+
+    def test_unfollow_author(self):
+        """Проверяем возможность отписаться от автора.
+        """
+        user_krio = User.objects.create_user(username='Krio')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(user_krio)
+        self.authorized_client.post(reverse(
+            'posts:profile_follow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        count_follow_in_bd_after_follow = Follow.objects.count()
+        response_unfollow = self.authorized_client.post(reverse(
+            'posts:profile_unfollow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        count_follow_in_bd_after_unfollow = Follow.objects.count()
+        follow_krio_after_delete = Follow.objects.filter(
+            user=user_krio,
+            author=PostsVievTests.user
+        )
+        self.assertEqual(
+            count_follow_in_bd_after_unfollow,
+            count_follow_in_bd_after_follow - 1,
+            'Не удалось отписаться.'
+        )
+        self.assertRedirects(response_unfollow, reverse(
+            'posts:profile',
+            kwargs={'username': PostsVievTests.user})
+        )
+        self.assertFalse(
+            follow_krio_after_delete.exists(),
+            'Пользователь подписан.'
+        )
+
+    def test_follow_index_work(self):
+        """Проверяем корректность работы ленты подписок.
+        """
+        self.authorized_client = Client()
+        user_krio = User.objects.create_user(username='Krio')
+        user_amber = User.objects.create_user(username='Amber')
+        self.authorized_client.force_login(user_amber)
+        self.authorized_client.post(reverse(
+            'posts:profile_follow',
+            kwargs={'username': user_krio})
+        )
+        self.authorized_client.force_login(user_krio)
+        self.authorized_client.post(reverse(
+            'posts:profile_follow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        self.authorized_client.force_login(PostsVievTests.user)
+        text_leo = 'Новый пост пользователя Leo'
+        self.authorized_client.post(
+            reverse('posts:post_create'),
+            data={'text': text_leo}
+        )
+        new_post = Post.objects.filter(author=PostsVievTests.user).first()
+        self.authorized_client.force_login(user_krio)
+        text_krio = 'Новый пост пользователя Krio'
+        self.authorized_client.post(
+            reverse('posts:post_create'),
+            data={'text': text_krio}
+        )
+        response_krio = self.authorized_client.post(reverse(
+            'posts:follow_index')
+        )
+        user_krio_follow_index = response_krio.context['page_obj'][0]
+        self.authorized_client.force_login(user_amber)
+        response_amber = self.authorized_client.post(
+            reverse('posts:follow_index')
+        )
+        user_amber_follow_index = response_amber.context['page_obj'][0]
+        self.assertEqual(
+            user_krio_follow_index.id,
+            new_post.id,
+            'В ленте подписчика новый пост не появился.'
+        )
+        self.assertNotEqual(
+            user_amber_follow_index.id,
+            new_post.id,
+            'В ленте неожидаемый пост.'
+        )
+
+    def test_unfollow_author_anonim_user(self):
+        """Неавторизованный пользователь не может отписаться от автора.
+        """
+        user_krio = User.objects.create_user(username='Krio')
+        Follow.objects.create(user=user_krio, author=PostsVievTests.user)
+        count_follow_in_bd = Follow.objects.all().count()
+        response_unfollow = self.client.post(reverse(
+            'posts:profile_unfollow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        count_follow_in_bd_after_response = Follow.objects.all().count()
+        self.assertEqual(
+            count_follow_in_bd,
+            count_follow_in_bd_after_response,
+            'Пользователь отписался будучи неавторизованным.'
+        )
+        self.assertRedirects(response_unfollow, (
+            reverse('users:login') + '?next=' + reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': PostsVievTests.user}
+            )))
+
+    def test_follow_author_anonim_user(self):
+        """Неавторизованный пользователь не может подписаться на автора.
+        """
+        User.objects.create_user(username='Krio')
+        count_follow_in_bd = Follow.objects.all().count()
+        response_unfollow = self.client.post(reverse(
+            'posts:profile_follow',
+            kwargs={'username': PostsVievTests.user})
+        )
+        count_follow_in_bd_after_response = Follow.objects.all().count()
+        self.assertEqual(
+            count_follow_in_bd,
+            count_follow_in_bd_after_response,
+            'Пользователь подписался будучи неавторизованным.'
+        )
+        self.assertRedirects(response_unfollow, (
+            reverse('users:login') + '?next=' + reverse(
+                'posts:profile_follow',
+                kwargs={'username': PostsVievTests.user}
+            )))
