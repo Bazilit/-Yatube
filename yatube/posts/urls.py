@@ -19,7 +19,7 @@ urlpatterns = [path('', views.index, name='index'),
                    '<int:post_id>/delete/',
                    views.post_delete, name='post_delete'),
                path(
-                   'posts/<int:post_id>/comment',
+                   'posts/<int:post_id>/comment/',
                    views.add_comment, name='add_comment'),
                path('follow/', views.follow_index, name='follow_index'),
                path(

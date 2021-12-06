@@ -8,7 +8,7 @@ from .models import Follow, Group, Post, User
 
 
 def index(request):
-    post_list = Post.objects.all()
+    post_list = Post.objects.select_related('group').all()
     paginator = Paginator(post_list, st.PАGES)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -153,7 +153,7 @@ def profile_follow(request, username):
     following = get_object_or_404(User, username=username)
     if (
         following == request.user
-        or Follow.objects.filter(author=following, user=request.user).exists()
+        or Follow.objects.get_or_create(author=following, user=request.user)
     ):
         return redirect('posts:profile', username=username)
     Follow.objects.create(user=user, author=following)
