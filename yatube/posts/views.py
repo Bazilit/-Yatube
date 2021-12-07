@@ -153,10 +153,9 @@ def profile_follow(request, username):
     following = get_object_or_404(User, username=username)
     if (
         following == request.user
-        or Follow.objects.get_or_create(author=following, user=request.user)
     ):
         return redirect('posts:profile', username=username)
-    Follow.objects.create(user=user, author=following)
+    Follow.objects.get_or_create(user=user, author=following)
     return redirect('posts:profile', username=username)
 
 
